@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Heun's Method — Numerical Methods</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+
+  <!-- MathJax -->
+  <script>
+    MathJax = {
+      tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+
+  <style>
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #13161e;
+      --card:      #1a1e2a;
+      --border:    #252b3b;
+      --accent:    #5b8af5;
+      --accent2:   #e8775a;
+      --gold:      #d4a847;
+      --text:      #e8eaf0;
+      --muted:     #7a82a0;
+      --code-bg:   #0a0c12;
+      --step-bg:   #161928;
+      --radius:    12px;
+      --radius-sm: 6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 300;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 62px;
+    }
+    .logo {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+    .logo span { color: var(--accent); }
+    nav { display: flex; gap: 0.25rem; }
+    nav a {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 0.35rem 0.9rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+      font-weight: 400;
+    }
+    nav a:hover, nav a.active { color: var(--text); background: var(--border); }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 5rem 2rem 3.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .hero-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 1.2rem;
+    }
+    .hero h1 {
+      font-family: 'Libre Baskerville', serif;
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.15;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: var(--gold);
+    }
+    .hero p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 680px;
+    }
+    .tag-row {
+      display: flex;
+      gap: 0.6rem;
+      margin-top: 1.8rem;
+      flex-wrap: wrap;
+    }
+    .tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      background: var(--border);
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+    .tag.blue  { background: rgba(91,138,245,0.12); color: var(--accent); border: 1px solid rgba(91,138,245,0.25); }
+    .tag.gold  { background: rgba(212,168,71,0.12); color: var(--gold);   border: 1px solid rgba(212,168,71,0.25); }
+    .tag.coral { background: rgba(232,119,90,0.12); color: var(--accent2);border: 1px solid rgba(232,119,90,0.25); }
+
+    /* ── SECTIONS ── */
+    .section {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+    }
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+    .section h2 {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 1.7rem;
+      font-weight: 700;
+      margin-bottom: 1.4rem;
+      color: var(--text);
+    }
+    p + p { margin-top: 0.9rem; }
+
+    /* ── MATH BLOCK ── */
+    .math-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 1.2rem 1.5rem;
+      margin: 1.4rem 0;
+      overflow-x: auto;
+    }
+    .math-block.gold { border-left-color: var(--gold); }
+    .math-block.coral { border-left-color: var(--accent2); }
+
+    /* ── ALGORITHM STEPS ── */
+    .algo-steps { list-style: none; margin: 1.4rem 0; display: flex; flex-direction: column; gap: 0.7rem; }
+    .algo-steps li {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      background: var(--step-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+    }
+    .step-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--accent);
+      background: rgba(91,138,245,0.12);
+      border: 1px solid rgba(91,138,245,0.25);
+      border-radius: 999px;
+      min-width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.05rem;
+    }
+    .step-text { font-size: 0.95rem; }
+
+    /* ── COMPARISON TABLE ── */
+    .compare-table { width: 100%; border-collapse: collapse; margin: 1.4rem 0; font-size: 0.9rem; }
+    .compare-table th {
+      background: var(--step-bg);
+      border: 1px solid var(--border);
+      padding: 0.7rem 1rem;
+      text-align: left;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .compare-table td {
+      border: 1px solid var(--border);
+      padding: 0.7rem 1rem;
+      color: var(--text);
+    }
+    .compare-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+    /* ── WORKED EXAMPLES ── */
+    .example-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.8rem 2rem;
+      margin: 1.5rem 0;
+    }
+    .example-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .ex-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 999px;
+      font-weight: 400;
+    }
+    .ex-badge.one { background: rgba(91,138,245,0.15); color: var(--accent); border: 1px solid rgba(91,138,245,0.3); }
+    .ex-badge.two { background: rgba(212,168,71,0.15);  color: var(--gold);   border: 1px solid rgba(212,168,71,0.3); }
+    .example-header h3 { font-family: 'Libre Baskerville', serif; font-size: 1.1rem; font-weight: 700; }
+
+    .work-step {
+      background: var(--step-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.2rem;
+      margin: 0.8rem 0;
+    }
+    .work-step-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+    .work-step.gold .work-step-title { color: var(--gold); }
+
+    .result-box {
+      background: rgba(91,138,245,0.08);
+      border: 1px solid rgba(91,138,245,0.25);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.2rem;
+      margin-top: 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.88rem;
+      color: var(--accent);
+    }
+    .result-box.gold { background: rgba(212,168,71,0.08); border-color: rgba(212,168,71,0.25); color: var(--gold); }
+
+    /* ── RESULT TABLE ── */
+    .res-table-wrap { overflow-x: auto; margin: 1rem 0; }
+    .res-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-family: 'DM Mono', monospace; }
+    .res-table th {
+      background: rgba(91,138,245,0.12);
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.9rem;
+      text-align: right;
+      color: var(--accent);
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+    }
+    .res-table th:first-child { text-align: center; }
+    .res-table td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.9rem;
+      text-align: right;
+      color: var(--muted);
+    }
+    .res-table td:first-child { text-align: center; color: var(--accent); }
+    .res-table td.highlight { color: var(--text); font-weight: 500; }
+    .res-table.gold th { background: rgba(212,168,71,0.12); color: var(--gold); }
+    .res-table.gold td:first-child { color: var(--gold); }
+
+    /* ── CALCULATOR ── */
+    #calculator {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+    }
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.45rem;
+      text-transform: uppercase;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.65rem 0.9rem;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: #3a4060; }
+
+    .hint { font-size: 0.75rem; color: #3a4060; margin-top: 0.35rem; font-family: 'DM Mono', monospace; }
+
+    .btn-row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    button {
+      padding: 0.65rem 1.5rem;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #7aa0f7; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary {
+      background: var(--border);
+      color: var(--muted);
+    }
+    .btn-secondary:hover { color: var(--text); }
+
+    #error-msg {
+      display: none;
+      background: rgba(232,119,90,0.1);
+      border: 1px solid rgba(232,119,90,0.3);
+      border-radius: var(--radius-sm);
+      padding: 0.7rem 1rem;
+      color: var(--accent2);
+      font-size: 0.88rem;
+      margin-top: 1rem;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── RESULT OUTPUT ── */
+    #result-section { display: none; margin-top: 2rem; }
+    .result-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--step-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.1rem;
+    }
+    .stat-label { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.4rem; }
+    .stat-value { font-family: 'DM Mono', monospace; font-size: 1.15rem; color: var(--accent); font-weight: 500; }
+
+    .out-table-wrap { overflow-x: auto; }
+    #out-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-family: 'DM Mono', monospace; }
+    #out-table th {
+      background: var(--step-bg);
+      border: 1px solid var(--border);
+      padding: 0.55rem 1rem;
+      text-align: right;
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    #out-table th:first-child { text-align: center; }
+    #out-table td {
+      border: 1px solid var(--border);
+      padding: 0.55rem 1rem;
+      text-align: right;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    #out-table td:first-child { text-align: center; color: var(--accent); font-weight: 500; }
+    #out-table td.y-col { color: var(--text); }
+    #out-table tr:last-child td { color: var(--gold) !important; border-top: 2px solid var(--gold); }
+
+    .export-row { margin-top: 1rem; display: flex; gap: 0.6rem; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: #2e3550;
+    }
+
+    /* ── SCROLL ANIMATION ── */
+    .fade-in { opacity: 0; transform: translateY(18px); transition: opacity 0.5s ease, transform 0.5s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 600px) {
+      .hero { padding: 3rem 1.2rem 2rem; }
+      .section { padding: 2rem 1.2rem; }
+      .example-card { padding: 1.2rem 1rem; }
+      nav a { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="logo">NUM.<span>37</span> / HEUN'S METHOD</div>
+  <nav>
+    <a href="#discussion" class="active">Discussion</a>
+    <a href="#examples">Examples</a>
+    <a href="#calculator">Calculator</a>
+  </nav>
+</header>
+
+<!-- ══ HERO ══ -->
+<div class="hero fade-in">
+  <div class="hero-label">Numerical Methods · ODE Solvers · Topic #37</div>
+  <h1>Improved Euler — <em>Heun's Method</em></h1>
+  <p>A second-order predictor-corrector method for solving ordinary differential equations with improved accuracy over the classical Euler method.</p>
+  <div class="tag-row">
+    <span class="tag blue">Order 2</span>
+    <span class="tag gold">Predictor–Corrector</span>
+    <span class="tag coral">Initial Value Problems</span>
+    <span class="tag">Runge–Kutta Family</span>
+  </div>
+</div>
+
+<!-- ══ SECTION 1: DISCUSSION ══ -->
+<section class="section fade-in" id="discussion">
+  <div class="section-label">01 — Mathematical Discussion</div>
+  <h2>Theory & Derivation</h2>
+
+  <p>
+    Heun's Method, also known as the <strong>Improved Euler Method</strong>, is a second-order Runge–Kutta technique for
+    numerically solving ordinary differential equations (ODEs) of the form:
+  </p>
+
+  <div class="math-block">
+    $$\frac{dy}{dx} = f(x,\, y), \qquad y(x_0) = y_0$$
+  </div>
+
+  <p>
+    The classical Euler method uses only a single slope estimate at the beginning of each interval, leading to
+    first-order accuracy \((O(h))\). Heun's method improves this by computing a <em>predictor</em> with Euler,
+    then using the slope at the predicted point to form a <em>corrector</em> — averaging both slopes for a
+    more accurate update. This gives second-order accuracy \((O(h^2))\).
+  </p>
+
+  <h2 style="margin-top:2rem">The Algorithm</h2>
+  <p>Given step size $h$ and current point $(x_i,\, y_i)$, each iteration performs two slope evaluations:</p>
+
+  <div class="math-block gold">
+    $$\text{\textbf{Predictor (Euler step):}}\quad \tilde{y}_{i+1} = y_i + h \cdot f(x_i,\, y_i)$$
+  </div>
+
+  <div class="math-block coral">
+    $$\text{\textbf{Corrector (average slopes):}}\quad y_{i+1} = y_i + \frac{h}{2}\bigl[f(x_i,\, y_i) + f(x_{i+1},\, \tilde{y}_{i+1})\bigr]$$
+  </div>
+
+  <p>Defining the two slope evaluations explicitly:</p>
+
+  <div class="math-block">
+    $$k_1 = f(x_i,\, y_i), \qquad k_2 = f(x_i + h,\; y_i + h\,k_1)$$
+    $$y_{i+1} = y_i + \frac{h}{2}(k_1 + k_2)$$
+  </div>
+
+  <ul class="algo-steps">
+    <li><span class="step-num">1</span><span class="step-text">Start with initial conditions $(x_0, y_0)$ and choose step size $h$ and endpoint $x_{\text{end}}$.</span></li>
+    <li><span class="step-num">2</span><span class="step-text">Compute the first slope: $k_1 = f(x_i,\, y_i)$</span></li>
+    <li><span class="step-num">3</span><span class="step-text">Predict: $\tilde{y}_{i+1} = y_i + h \cdot k_1$&nbsp;&nbsp;(Euler step)</span></li>
+    <li><span class="step-num">4</span><span class="step-text">Compute the second slope: $k_2 = f(x_i + h,\; \tilde{y}_{i+1})$</span></li>
+    <li><span class="step-num">5</span><span class="step-text">Correct: $y_{i+1} = y_i + \dfrac{h}{2}(k_1 + k_2)$&nbsp;&nbsp;(average slopes)</span></li>
+    <li><span class="step-num">6</span><span class="step-text">Advance: $x_{i+1} = x_i + h$. Repeat from step 2 until $x = x_{\text{end}}$.</span></li>
+  </ul>
+
+  <h2 style="margin-top:2rem">Error Analysis & Properties</h2>
+  <p>
+    The local truncation error of Heun's method is $O(h^3)$ per step, giving a global error of $O(h^2)$.
+    This is a significant improvement over the Euler method's $O(h^2)$ local / $O(h)$ global error.
+  </p>
+
+  <div class="math-block">
+    $$\text{Local Truncation Error:}\quad \tau = O(h^3) \qquad\qquad \text{Global Error:}\quad E = O(h^2)$$
+  </div>
+
+  <table class="compare-table" style="margin-top:1.5rem">
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>Euler Method</th>
+        <th>Heun's Method</th>
+        <th>RK4</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Order</td><td>1st</td><td>2nd</td><td>4th</td></tr>
+      <tr><td>Function evaluations / step</td><td>1</td><td>2</td><td>4</td></tr>
+      <tr><td>Global error</td><td>$O(h)$</td><td>$O(h^2)$</td><td>$O(h^4)$</td></tr>
+      <tr><td>Stability region</td><td>Small</td><td>Medium</td><td>Larger</td></tr>
+      <tr><td>Computational cost</td><td>Low</td><td>Low–Medium</td><td>Higher</td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:1.2rem">
+    Heun's method belongs to the family of <strong>explicit Runge–Kutta methods</strong>. Its Butcher tableau is:
+  </p>
+
+  <div class="math-block">
+    $$\begin{array}{c|cc}
+      0 & 0 & 0 \\
+      1 & 1 & 0 \\
+      \hline
+        & \tfrac{1}{2} & \tfrac{1}{2}
+    \end{array}$$
+  </div>
+</section>
+
+<!-- ══ SECTION 2: EXAMPLES ══ -->
+<section class="section fade-in" id="examples">
+  <div class="section-label">02 — Worked Examples</div>
+  <h2>Step-by-Step Solutions</h2>
+
+  <!-- EXAMPLE 1 -->
+  <div class="example-card">
+    <div class="example-header">
+      <span class="ex-badge one">Example 1</span>
+      <h3>Solving $\dfrac{dy}{dx} = x + y$,&nbsp;&nbsp;$y(0) = 1$,&nbsp;&nbsp;$h = 0.1$</h3>
+    </div>
+
+    <p><strong>Given:</strong> $f(x, y) = x + y$, $x_0 = 0$, $y_0 = 1$, $h = 0.1$. Find $y$ at $x = 0.2$.</p>
+    <p style="margin-top:0.7rem"><strong>Exact solution:</strong> $y = 2e^x - x - 1$</p>
+
+    <!-- Step 1: i=0 -->
+    <div class="work-step">
+      <div class="work-step-title">Step 1 — Iteration i = 0 &nbsp;(from $x_0 = 0$ to $x_1 = 0.1$)</div>
+      <p>$k_1 = f(0,\;1) = 0 + 1 = 1$</p>
+      <p>$\tilde{y}_1 = 1 + (0.1)(1) = 1.1\quad$ (predictor)</p>
+      <p>$k_2 = f(0.1,\;1.1) = 0.1 + 1.1 = 1.2$</p>
+      <p>$y_1 = 1 + \dfrac{0.1}{2}(1 + 1.2) = 1 + 0.05 \times 2.2 = 1 + 0.11 = \mathbf{1.11}$</p>
+    </div>
+
+    <!-- Step 2: i=1 -->
+    <div class="work-step">
+      <div class="work-step-title">Step 2 — Iteration i = 1 &nbsp;(from $x_1 = 0.1$ to $x_2 = 0.2$)</div>
+      <p>$k_1 = f(0.1,\;1.11) = 0.1 + 1.11 = 1.21$</p>
+      <p>$\tilde{y}_2 = 1.11 + (0.1)(1.21) = 1.11 + 0.121 = 1.231\quad$ (predictor)</p>
+      <p>$k_2 = f(0.2,\;1.231) = 0.2 + 1.231 = 1.431$</p>
+      <p>$y_2 = 1.11 + \dfrac{0.1}{2}(1.21 + 1.431) = 1.11 + 0.05 \times 2.641 = 1.11 + 0.13205 = \mathbf{1.24205}$</p>
+    </div>
+
+    <!-- Summary table -->
+    <div class="res-table-wrap" style="margin-top:1.2rem">
+      <table class="res-table">
+        <thead>
+          <tr>
+            <th>$i$</th><th>$x_i$</th><th>$y_i$</th><th>$k_1$</th><th>$\tilde{y}_{i+1}$</th><th>$k_2$</th><th>$y_{i+1}$</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>0</td><td>0.0000</td><td class="highlight">1.00000</td><td>1.0000</td><td>1.10000</td><td>1.2000</td><td class="highlight">1.11000</td></tr>
+          <tr><td>1</td><td>0.1000</td><td class="highlight">1.11000</td><td>1.2100</td><td>1.23100</td><td>1.4310</td><td class="highlight">1.24205</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="result-box">
+      Heun's approximation: y(0.2) ≈ 1.24205
+      &nbsp;|&nbsp; Exact: y(0.2) = 2e^0.2 − 0.2 − 1 ≈ 1.24281
+      &nbsp;|&nbsp; Error ≈ 0.00076
+    </div>
+  </div>
+
+  <!-- EXAMPLE 2 -->
+  <div class="example-card">
+    <div class="example-header">
+      <span class="ex-badge two">Example 2</span>
+      <h3>Solving $\dfrac{dy}{dx} = -2xy$,&nbsp;&nbsp;$y(0) = 1$,&nbsp;&nbsp;$h = 0.25$</h3>
+    </div>
+
+    <p><strong>Given:</strong> $f(x, y) = -2xy$, $x_0 = 0$, $y_0 = 1$, $h = 0.25$. Find $y$ at $x = 0.75$.</p>
+    <p style="margin-top:0.7rem"><strong>Exact solution:</strong> $y = e^{-x^2}$</p>
+
+    <!-- Iteration 1 -->
+    <div class="work-step gold">
+      <div class="work-step-title">Step 1 — Iteration i = 0 &nbsp;(from $x_0 = 0$ to $x_1 = 0.25$)</div>
+      <p>$k_1 = f(0,\;1) = -2(0)(1) = 0$</p>
+      <p>$\tilde{y}_1 = 1 + (0.25)(0) = 1.0\quad$ (predictor)</p>
+      <p>$k_2 = f(0.25,\;1.0) = -2(0.25)(1.0) = -0.5$</p>
+      <p>$y_1 = 1 + \dfrac{0.25}{2}(0 + (-0.5)) = 1 + 0.125 \times (-0.5) = 1 - 0.0625 = \mathbf{0.9375}$</p>
+    </div>
+
+    <!-- Iteration 2 -->
+    <div class="work-step gold">
+      <div class="work-step-title">Step 2 — Iteration i = 1 &nbsp;(from $x_1 = 0.25$ to $x_2 = 0.50$)</div>
+      <p>$k_1 = f(0.25,\;0.9375) = -2(0.25)(0.9375) = -0.46875$</p>
+      <p>$\tilde{y}_2 = 0.9375 + (0.25)(-0.46875) = 0.9375 - 0.117188 = 0.820313\quad$ (predictor)</p>
+      <p>$k_2 = f(0.50,\;0.820313) = -2(0.50)(0.820313) = -0.820313$</p>
+      <p>$y_2 = 0.9375 + \dfrac{0.25}{2}(-0.46875 + (-0.820313)) = 0.9375 + 0.125 \times (-1.289063)$</p>
+      <p>$y_2 = 0.9375 - 0.161133 = \mathbf{0.776367}$</p>
+    </div>
+
+    <!-- Iteration 3 -->
+    <div class="work-step gold">
+      <div class="work-step-title">Step 3 — Iteration i = 2 &nbsp;(from $x_2 = 0.50$ to $x_3 = 0.75$)</div>
+      <p>$k_1 = f(0.50,\;0.776367) = -2(0.50)(0.776367) = -0.776367$</p>
+      <p>$\tilde{y}_3 = 0.776367 + (0.25)(-0.776367) = 0.776367 - 0.194092 = 0.582275\quad$ (predictor)</p>
+      <p>$k_2 = f(0.75,\;0.582275) = -2(0.75)(0.582275) = -0.873413$</p>
+      <p>$y_3 = 0.776367 + \dfrac{0.25}{2}(-0.776367 + (-0.873413)) = 0.776367 + 0.125 \times (-1.64978)$</p>
+      <p>$y_3 = 0.776367 - 0.206222 = \mathbf{0.570145}$</p>
+    </div>
+
+    <!-- Summary table -->
+    <div class="res-table-wrap" style="margin-top:1.2rem">
+      <table class="res-table gold">
+        <thead>
+          <tr>
+            <th>$i$</th><th>$x_i$</th><th>$y_i$</th><th>$k_1$</th><th>$\tilde{y}_{i+1}$</th><th>$k_2$</th><th>$y_{i+1}$</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>0</td><td>0.0000</td><td class="highlight">1.000000</td><td>0.000000</td><td>1.000000</td><td>−0.500000</td><td class="highlight">0.937500</td></tr>
+          <tr><td>1</td><td>0.2500</td><td class="highlight">0.937500</td><td>−0.468750</td><td>0.820313</td><td>−0.820313</td><td class="highlight">0.776367</td></tr>
+          <tr><td>2</td><td>0.5000</td><td class="highlight">0.776367</td><td>−0.776367</td><td>0.582275</td><td>−0.873413</td><td class="highlight">0.570145</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="result-box gold">
+      Heun's approximation: y(0.75) ≈ 0.570145
+      &nbsp;|&nbsp; Exact: y(0.75) = e^(−0.5625) ≈ 0.569783
+      &nbsp;|&nbsp; Error ≈ 0.000362
+    </div>
+  </div>
+</section>
+
+<!-- ══ SECTION 3: CALCULATOR ══ -->
+<section class="section fade-in" id="calculator">
+  <div class="section-label">03 — Interactive Calculator</div>
+  <h2>Try It Yourself</h2>
+  <p style="margin-bottom:1.5rem; color:var(--muted); font-size:0.95rem">
+    Enter any ODE of the form $dy/dx = f(x,y)$ with initial conditions. Use <code style="font-family:'DM Mono',monospace;color:var(--accent)">x</code>, <code style="font-family:'DM Mono',monospace;color:var(--accent)">y</code>, and standard math functions.
+  </p>
+
+  <div id="calculator">
+    <div class="calc-grid">
+      <div>
+        <label>f(x, y) — right-hand side</label>
+        <input type="text" id="f-expr" value="x + y" placeholder="e.g. x + y or -2*x*y"/>
+        <div class="hint">Ops: +, −, *, /, ** | Functions: sin, cos, exp, log, sqrt, abs</div>
+      </div>
+      <div>
+        <label>x₀ — initial x</label>
+        <input type="number" id="x0" value="0" step="any"/>
+      </div>
+      <div>
+        <label>y₀ — initial y</label>
+        <input type="number" id="y0" value="1" step="any"/>
+      </div>
+      <div>
+        <label>h — step size</label>
+        <input type="number" id="h" value="0.1" step="any" min="0.0001"/>
+      </div>
+      <div>
+        <label>x_end — stop at x =</label>
+        <input type="number" id="x-end" value="1" step="any"/>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="calculate()">▶ Run Heun's Method</button>
+      <button class="btn-secondary" onclick="resetCalc()">Reset</button>
+    </div>
+
+    <div id="error-msg"></div>
+
+    <div id="result-section">
+      <div class="result-summary" id="summary-cards"></div>
+      <div class="out-table-wrap">
+        <table id="out-table">
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>$x_i$</th>
+              <th>$y_i$</th>
+              <th>$k_1$</th>
+              <th>$\tilde{y}_{i+1}$</th>
+              <th>$k_2$</th>
+              <th>$y_{i+1}$</th>
+            </tr>
+          </thead>
+          <tbody id="out-body"></tbody>
+        </table>
+      </div>
+      <div class="export-row">
+        <button class="btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Heun's Method · Numerical Methods Online Calculator · PIT Project &nbsp;·&nbsp; Built with Flask + MathJax
+</footer>
+
+<script>
+  // ── Scroll fade-in
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  let lastResults = [];
+
+  async function calculate() {
+    const fExpr = document.getElementById('f-expr').value.trim();
+    const x0    = document.getElementById('x0').value;
+    const y0    = document.getElementById('y0').value;
+    const h     = document.getElementById('h').value;
+    const xEnd  = document.getElementById('x-end').value;
+
+    document.getElementById('error-msg').style.display = 'none';
+    document.getElementById('result-section').style.display = 'none';
+
+    try {
+      const res = await fetch('/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ f: fExpr, x0, y0, h, x_end: xEnd })
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        showError(data.error || 'Unknown error');
+        return;
+      }
+
+      lastResults = data.steps;
+      renderResults(data.steps, +x0, +y0, +h, fExpr);
+    } catch (err) {
+      showError('Could not reach the server. Is Flask running?');
+    }
+  }
+
+  function renderResults(steps, x0, y0, h, fExpr) {
+    // Summary cards
+    const last = steps[steps.length - 1];
+    document.getElementById('summary-cards').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Steps taken</div><div class="stat-value">${steps.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Step size h</div><div class="stat-value">${h}</div></div>
+      <div class="stat-card"><div class="stat-label">Final x</div><div class="stat-value">${last.x_i + h}</div></div>
+      <div class="stat-card"><div class="stat-label">y at x_end</div><div class="stat-value" style="color:var(--gold)">${last.y_new.toFixed(8)}</div></div>
+    `;
+
+    // Table body
+    const tbody = document.getElementById('out-body');
+    tbody.innerHTML = steps.map(s => `
+      <tr>
+        <td>${s.step}</td>
+        <td>${s.x_i.toFixed(6)}</td>
+        <td class="y-col">${s.y_i.toFixed(8)}</td>
+        <td>${s.k1.toFixed(8)}</td>
+        <td>${s.y_pred.toFixed(8)}</td>
+        <td>${s.k2.toFixed(8)}</td>
+        <td class="y-col">${s.y_new.toFixed(8)}</td>
+      </tr>
+    `).join('');
+
+    document.getElementById('result-section').style.display = 'block';
+    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Re-render MathJax on table headers
+    if (window.MathJax) MathJax.typesetPromise();
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
+  }
+
+  function resetCalc() {
+    document.getElementById('f-expr').value = 'x + y';
+    document.getElementById('x0').value = '0';
+    document.getElementById('y0').value = '1';
+    document.getElementById('h').value = '0.1';
+    document.getElementById('x-end').value = '1';
+    document.getElementById('error-msg').style.display = 'none';
+    document.getElementById('result-section').style.display = 'none';
+  }
+
+  function exportCSV() {
+    if (!lastResults.length) return;
+    const headers = ['step','x_i','y_i','k1','y_pred','k2','y_new'];
+    const rows = lastResults.map(s => headers.map(k => s[k]).join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'heun_results.csv';
+    a.click();
+  }
+</script>
+</body>
+</html>
