@@ -1047,6 +1047,7 @@
 
   let lastResults = [];
 
+  // ── Calculator
   async function calculate() {
     const fExpr = document.getElementById('f-expr').value.trim();
     const x0    = document.getElementById('x0').value;
@@ -1064,12 +1065,7 @@
         body: JSON.stringify({ f: fExpr, x0, y0, h, x_end: xEnd })
       });
       const data = await res.json();
-
-      if (!res.ok || data.error) {
-        showError(data.error || 'Unknown error');
-        return;
-      }
-
+      if (!res.ok || data.error) { showError(data.error || 'Unknown error'); return; }
       lastResults = data.steps;
       renderResults(data.steps, +x0, +y0, +h, fExpr);
     } catch (err) {
@@ -1078,39 +1074,34 @@
   }
 
   function renderResults(steps, x0, y0, h, fExpr) {
-    // Summary cards
     const last = steps[steps.length - 1];
-    document.getElementById('summary-cards').innerHTML = `
-      <div class="stat-card"><div class="stat-label">Steps taken</div><div class="stat-value">${steps.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Step size h</div><div class="stat-value">${h}</div></div>
-      <div class="stat-card"><div class="stat-label">Final x</div><div class="stat-value">${last.x_i + h}</div></div>
-      <div class="stat-card"><div class="stat-label">y at x_end</div><div class="stat-value" style="color:var(--gold)">${last.y_new.toFixed(8)}</div></div>
-    `;
+    document.getElementById('summary-cards').innerHTML =
+      '<div class="stat-card"><div class="stat-label">Steps taken</div><div class="stat-value">' + steps.length + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Step size h</div><div class="stat-value">' + h + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Final x</div><div class="stat-value">' + (last.x_i + h) + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">y at x_end</div><div class="stat-value" style="color:var(--gold)">' + last.y_new.toFixed(8) + '</div></div>';
 
-    // Table body
     const tbody = document.getElementById('out-body');
-    tbody.innerHTML = steps.map(s => `
-      <tr>
-        <td>${s.step}</td>
-        <td>${s.x_i.toFixed(6)}</td>
-        <td class="y-col">${s.y_i.toFixed(8)}</td>
-        <td>${s.k1.toFixed(8)}</td>
-        <td>${s.y_pred.toFixed(8)}</td>
-        <td>${s.k2.toFixed(8)}</td>
-        <td class="y-col">${s.y_new.toFixed(8)}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = steps.map(function(s) {
+      return '<tr>' +
+        '<td>' + s.step + '</td>' +
+        '<td>' + s.x_i.toFixed(6) + '</td>' +
+        '<td class="y-col">' + s.y_i.toFixed(8) + '</td>' +
+        '<td>' + s.k1.toFixed(8) + '</td>' +
+        '<td>' + s.y_pred.toFixed(8) + '</td>' +
+        '<td>' + s.k2.toFixed(8) + '</td>' +
+        '<td class="y-col">' + s.y_new.toFixed(8) + '</td>' +
+      '</tr>';
+    }).join('');
 
     document.getElementById('result-section').style.display = 'block';
     document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    // Re-render MathJax on table headers
     if (window.MathJax) MathJax.typesetPromise();
   }
 
   function showError(msg) {
-    const el = document.getElementById('error-msg');
-    el.textContent = '⚠ ' + msg;
+    var el = document.getElementById('error-msg');
+    el.textContent = 'Warning: ' + msg;
     el.style.display = 'block';
   }
 
@@ -1126,56 +1117,58 @@
 
   function exportCSV() {
     if (!lastResults.length) return;
-    const headers = ['step','x_i','y_i','k1','y_pred','k2','y_new'];
-    const rows = lastResults.map(s => headers.map(k => s[k]).join(','));
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
+    var headers = ['step','x_i','y_i','k1','y_pred','k2','y_new'];
+    var rows = lastResults.map(function(s) { return headers.map(function(k) { return s[k]; }).join(','); });
+    var csv = [headers.join(',')].concat(rows).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'heun_results.csv';
     a.click();
   }
 
-  // ── Landing page
+  // ── Landing navigation
   function enterSite() {
-    document.getElementById('landing').style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-    document.getElementById('landing').style.opacity = '0';
-    document.getElementById('landing').style.transform = 'translateY(-20px)';
-    setTimeout(() => {
-      document.getElementById('landing').style.display = 'none';
+    var landing = document.getElementById('landing');
+    landing.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    landing.style.opacity = '0';
+    landing.style.transform = 'translateY(-20px)';
+    setTimeout(function() {
+      landing.style.display = 'none';
       document.getElementById('discussion').scrollIntoView({ behavior: 'smooth' });
     }, 600);
   }
 
+  function goCalc() {
+    var landing = document.getElementById('landing');
+    landing.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    landing.style.opacity = '0';
+    landing.style.transform = 'translateY(-20px)';
+    setTimeout(function() {
+      landing.style.display = 'none';
+      document.getElementById('calculator').scrollIntoView({ behavior: 'smooth' });
+    }, 600);
+  }
+
   function goHome() {
-    // Show landing again
-    const landing = document.getElementById('landing');
+    var landing = document.getElementById('landing');
     landing.style.display = 'flex';
+    landing.style.transition = 'none';
     landing.style.opacity = '0';
     landing.style.transform = 'translateY(20px)';
-    landing.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => {
+    window.scrollTo({ top: 0 });
+    setTimeout(function() {
+      landing.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
       landing.style.opacity = '1';
       landing.style.transform = 'translateY(0)';
     }, 50);
   }
 
-  function goCalc() {
-    document.getElementById('landing').style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-    document.getElementById('landing').style.opacity = '0';
-    document.getElementById('landing').style.transform = 'translateY(-20px)';
-    setTimeout(() => {
-      document.getElementById('landing').style.display = 'none';
-      document.getElementById('calculator').scrollIntoView({ behavior: 'smooth' });
-    }, 600);
-  }
-
-  // ── Mathematical floating symbols canvas
+  // ── Math particle canvas
   (function() {
-    const canvas = document.getElementById('particle-canvas');
-    const ctx = canvas.getContext('2d');
-    let W, H;
+    var canvas = document.getElementById('particle-canvas');
+    var ctx = canvas.getContext('2d');
+    var W, H;
 
     function resize() {
       W = canvas.width  = canvas.offsetWidth;
@@ -1184,86 +1177,80 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // Math symbols and expressions relevant to Heun's Method
-    const SYMBOLS = [
-      'dy/dx', 'k₁', 'k₂', 'h/2', 'f(x,y)',
-      'y_{i+1}', 'Δx', 'O(h²)', '∫', 'Σ',
-      'k₁+k₂', 'ỹ', '∂y', 'dx', 'lim',
-      'y₀', 'x₀', 'e^x', 'sin(x)', 'cos(x)',
-      '≈', 'Δy', 'slope', 'ODE', 'RK2',
-      'f'(x)', '∞', 'π', 'h→0', 'corrector',
-      'predictor', 'Euler', 'Heun', 'y(x)', 'k₁/2',
+    var SYMBOLS = [
+      'dy/dx', 'k1', 'k2', 'h/2', 'f(x,y)',
+      'y(i+1)', 'delta-x', 'O(h^2)', 'integral', 'Sigma',
+      'k1+k2', 'y-tilde', 'dy', 'dx', 'lim',
+      'y0', 'x0', 'e^x', 'sin(x)', 'cos(x)',
+      'approx', 'delta-y', 'slope', 'ODE', 'RK2',
+      'f(x)', 'infinity', 'pi', 'h->0', 'corrector',
+      'predictor', 'Euler', 'Heun', 'y(x)', 'k1/2'
     ];
 
-    const particles = [];
-    const COUNT = 38;
-
-    for (let i = 0; i < COUNT; i++) {
-      const size = Math.random() * 9 + 9;
+    var particles = [];
+    var COUNT = 38;
+    for (var i = 0; i < COUNT; i++) {
+      var size = Math.random() * 9 + 9;
       particles.push({
-        x:    Math.random() * W,
-        y:    Math.random() * H,
-        vx:   (Math.random() - 0.5) * 0.22,
-        vy:   (Math.random() - 0.5) * 0.22,
-        a:    Math.random() * 0.18 + 0.06,
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.22,
+        vy: (Math.random() - 0.5) * 0.22,
+        a: Math.random() * 0.18 + 0.06,
         size: size,
-        sym:  SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
-        // slow random rotation drift
-        angle:  Math.random() * Math.PI * 2,
+        sym: SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
+        angle: Math.random() * Math.PI * 2,
         dangle: (Math.random() - 0.5) * 0.004,
-        // color: mostly blue, some gold, some muted
-        hue: Math.random() < 0.6 ? 'blue' : Math.random() < 0.5 ? 'gold' : 'muted',
+        hue: Math.random() < 0.6 ? 'blue' : Math.random() < 0.5 ? 'gold' : 'muted'
       });
     }
 
     function colorFor(p) {
-      if (p.hue === 'blue')  return `rgba(91,138,245,${p.a})`;
-      if (p.hue === 'gold')  return `rgba(212,168,71,${p.a})`;
-      return `rgba(122,130,160,${p.a * 0.7})`;
+      if (p.hue === 'blue') return 'rgba(91,138,245,' + p.a + ')';
+      if (p.hue === 'gold') return 'rgba(212,168,71,' + p.a + ')';
+      return 'rgba(122,130,160,' + (p.a * 0.7) + ')';
     }
 
     function draw() {
       ctx.clearRect(0, 0, W, H);
 
-      // Draw faint grid lines for a "graph paper" feel
+      // Faint grid
       ctx.strokeStyle = 'rgba(91,138,245,0.03)';
       ctx.lineWidth = 1;
-      const gx = 60, gy = 60;
-      for (let x = 0; x < W; x += gx) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-      for (let y = 0; y < H; y += gy) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+      for (var gx = 0; gx < W; gx += 60) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
+      for (var gy = 0; gy < H; gy += 60) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
 
-      // Draw a faint sine-wave curve across the canvas
+      // Animated sine wave
       ctx.beginPath();
       ctx.strokeStyle = 'rgba(91,138,245,0.06)';
       ctx.lineWidth = 1.5;
-      for (let x = 0; x <= W; x += 2) {
-        const y = H / 2 + Math.sin(x / 80 + Date.now() / 4000) * (H * 0.18);
-        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      for (var sx = 0; sx <= W; sx += 2) {
+        var sy = H / 2 + Math.sin(sx / 80 + Date.now() / 4000) * (H * 0.18);
+        sx === 0 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
       }
       ctx.stroke();
 
-      // Draw a faint exponential-decay curve
+      // Exponential decay curve
       ctx.beginPath();
       ctx.strokeStyle = 'rgba(212,168,71,0.05)';
       ctx.lineWidth = 1.5;
-      for (let x = 0; x <= W; x += 2) {
-        const y = H * 0.15 + (H * 0.7) * Math.exp(-x / (W * 0.9));
-        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      for (var ex = 0; ex <= W; ex += 2) {
+        var ey = H * 0.15 + (H * 0.7) * Math.exp(-ex / (W * 0.9));
+        ex === 0 ? ctx.moveTo(ex, ey) : ctx.lineTo(ex, ey);
       }
       ctx.stroke();
 
-      // Draw math symbol particles
-      particles.forEach(p => {
+      // Symbol particles
+      particles.forEach(function(p) {
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.angle);
-        ctx.font = p.size + "px DM Mono, monospace";
+        ctx.font = p.size + 'px monospace';
         ctx.fillStyle = colorFor(p);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(p.sym, 0, 0);
         ctx.restore();
-
         p.x += p.vx; p.y += p.vy;
         p.angle += p.dangle;
         if (p.x < -60)  p.x = W + 60;
@@ -1276,7 +1263,6 @@
     }
     draw();
   })();
-
 </script>
 </body>
 </html>
