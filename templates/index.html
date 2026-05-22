@@ -483,11 +483,11 @@
   <p>Given step size $h$ and current point $(x_i,\, y_i)$, each iteration performs two slope evaluations:</p>
 
   <div class="math-block gold">
-    $$\text{\textbf{Predictor (Euler step):}}\quad \tilde{y}_{i+1} = y_i + h \cdot f(x_i,\, y_i)$$
+    $$\textbf{Predictor (Euler step):}\quad \tilde{y}_{i+1} = y_i + h \cdot f(x_i,\, y_i)$$
   </div>
 
   <div class="math-block coral">
-    $$\text{\textbf{Corrector (average slopes):}}\quad y_{i+1} = y_i + \frac{h}{2}\bigl[f(x_i,\, y_i) + f(x_{i+1},\, \tilde{y}_{i+1})\bigr]$$
+    $$\textbf{Corrector (average slopes):}\quad y_{i+1} = y_i + \frac{h}{2}\bigl[f(x_i,\, y_i) + f(x_{i+1},\, \tilde{y}_{i+1})\bigr]$$
   </div>
 
   <p>Defining the two slope evaluations explicitly:</p>
